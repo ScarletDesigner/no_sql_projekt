@@ -179,8 +179,75 @@ class SendNewPackage(tk.Frame):
         paymentMethodEntry = ttk.Combobox(self, values = ['Blik', 'Za pobraniem', 'Przelew tradycyjny'])
         paymentMethodEntry.grid(row=5, column=1)
 
+        def addressHandler(event):
+            query="MATCH (a:Address) RETURN a.city, a.street"
+            results = session.run(query)
+            nodes = list(results)
+            current = addressEntry.current()
+            if current != -1:
+                x = addressEntry.get()
+                if x == '':
+                    cityEntry.config(state= 'enabled')
+                    streetEntry.config(state= 'enabled')
+                    postCodeEntry.config(state= 'enabled')
+                    houseNumberEntry.config(state= 'enabled')
+                    apartmentNumberEntry.config(state= 'enabled')
+                    countryEntry.config(state= 'enabled')
+                    cityEntry.delete(0, 'end')
+                    streetEntry.delete(0, 'end')
+                    postCodeEntry.delete(0, 'end')
+                    houseNumberEntry.delete(0, 'end')
+                    apartmentNumberEntry.delete(0, 'end')
+                    countryEntry.delete(0, 'end')
+                else:
+                    cityEntry.config(state= 'enabled')
+                    streetEntry.config(state= 'enabled')
+                    postCodeEntry.config(state= 'enabled')
+                    houseNumberEntry.config(state= 'enabled')
+                    apartmentNumberEntry.config(state= 'enabled')
+                    countryEntry.config(state= 'enabled')
+                    cityEntry.delete(0, 'end')
+                    streetEntry.delete(0, 'end')
+                    postCodeEntry.delete(0, 'end')
+                    houseNumberEntry.delete(0, 'end')
+                    apartmentNumberEntry.delete(0, 'end')
+                    countryEntry.delete(0, 'end')
+                    id = addressEntry.get().split(sep=',')[0]
+                    query="MATCH (a:Address) WHERE a.id='%s' RETURN a.city, a.street, a.postCode, a.houseNumber, a.apartmentNumber, a.country" % (id)
+                    results = session.run(query)
+                    nodes = list(results)
+                    cityEntry.insert(0, str(nodes[0]['a.city']))
+                    cityEntry.config(state= 'disabled')
+                    streetEntry.insert(0, str(nodes[0]['a.street']))
+                    streetEntry.config(state= 'disabled')
+                    postCodeEntry.insert(0, str(nodes[0]['a.postCode']))
+                    postCodeEntry.config(state= 'disabled')
+                    houseNumberEntry.insert(0, str(nodes[0]['a.houseNumber']))
+                    houseNumberEntry.config(state= 'disabled')
+                    apartmentNumberEntry.insert(0, str(nodes[0]['a.apartmentNumber']))
+                    apartmentNumberEntry.config(state= 'disabled')
+                    countryEntry.insert(0, str(nodes[0]['a.country']))
+                    countryEntry.config(state= 'disabled')
+
+
+        def getAddressesList():
+            query="MATCH (a:Address) RETURN a.id, a.city, a.street"
+            results = session.run(query)
+            nodes = list(results)
+            addresses = []
+            addresses.append('')
+            for node in nodes:
+                row = str(node['a.id'])
+                row += ','
+                row += str(node['a.city'])
+                row += ' - '
+                row += str(node['a.street'])
+                addresses.append(row)
+            return addresses
+
         ttk.Label(self, text="Adres docelowy:").grid(row=6, column=0, pady=20)
-        addressEntry = ttk.Combobox(self)
+        addressEntry = ttk.Combobox(self, values= getAddressesList())
+        addressEntry.bind('<<ComboboxSelected>>', addressHandler)
         addressEntry.grid(row=6, column=1)
         ttk.Label(self, text="Miasto:").grid(row=7, column=0)
         cityEntry = ttk.Entry(self)
@@ -221,6 +288,8 @@ class SendNewPackage(tk.Frame):
             if(addressEntry.get() == ''):
                 id = insertAddress()
 
+            
+
             query="MATCH (a:Address), (p:Package) WHERE a.id='%s' AND p.id='%s' CREATE (p)-[:HAS_DESTINATION]->(a)" % (id, number)
             q=session.run(query)
         
@@ -238,15 +307,9 @@ class SendNewPackage(tk.Frame):
             q=session.run(query)
             return id
 
-        def getAdressesList():
-            query="MATCH (a:Address) RETURN a"
-            results = session.run(query)
-            nodes = list(results.graph()._nodes.values())
-            addresses = []
-            for node in nodes:
-                addresses.append(node.id)
 
-        def getAdresses():
+
+        def getAddresses():
             query="MATCH (a:Address) RETURN a"
             results = session.run(query)
             nodes = list(results.graph()._nodes.values())

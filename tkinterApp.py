@@ -3,6 +3,8 @@ from tkinter import ttk
 from pymongo import MongoClient
 import pandas as pd
 from dateutil import parser
+from neo4j import GraphDatabase
+import networkx as nx
 
 LARGEFONT =("Verdana", 15)
 
@@ -12,6 +14,14 @@ database = client['lab3']
 users = database["users"]
 
 loggedInUserLabel = None
+
+
+uri = "bolt://localhost:7687"
+userName = "neo4j"
+password = "kurierzy"
+graphDb_Driver = GraphDatabase.driver(uri, auth=(userName, password))
+session = graphDb_Driver.session(database="kurierzy")
+
 
 def userDoesExist(login):
     user = {
@@ -31,7 +41,7 @@ def logIn(controller, login, password, statusLabel):
     if len(results_list) > 0:
         global loggedInUserLabel
         loggedInUserLabel.config(text= "Witaj " + login + "! Nadaj nową paczkę")
-        controller.show_frame(Page1)
+        controller.show_frame(SendNewPackage)
     else:
         statusLabel.config(text= "Username or password incorrect")
 
@@ -87,7 +97,7 @@ class tkinterApp(tk.Tk):
 
         self.frames = {}
 
-        for F in (StartPage, Page1):
+        for F in (StartPage, SendNewPackage, ShowAllPackages):
             frame = F(container,self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -122,19 +132,99 @@ class StartPage(tk.Frame):
         deleteUserButton.grid(row=5,column=1)
 
 
-class Page1(tk.Frame):
+class SendNewPackage(tk.Frame):
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
+
+        def deliveryCostHandler(event):
+            current = deliveryMethodEntry.current()
+            if current != -1:
+                x = deliveryMethodEntry.get()
+                if x == 'Kurier Pocztex':
+                    deliveryCostLabel.config(text= 7.99)
+                if x == 'Kurier DPD':
+                    deliveryCostLabel.config(text= 7.39)
+                if x == 'Kurier DHL':
+                    deliveryCostLabel.config(text= 8.99)
+                if x == 'Paczkomaty InPost':
+                    deliveryCostLabel.config(text= 9.99)
+                
+
+
         global loggedInUserLabel
         loggedInUserLabel = ttk.Label(self, font= LARGEFONT)
         loggedInUserLabel.grid(row=0, column=0)
-        ttk.Checkbutton(self, text="Kruchy towar").grid(row=1,column=1)
+        isFragileEntry = ttk.Checkbutton(self, text="Kruchy towar")
+        isFragileEntry.grid(row=1,column=1)
         ttk.Label(self, text="Wartość przesyłki:").grid(row=2, column=0)
-        ttk.Entry(self).grid(row=2,column=1)
+        shipmentValueEntry = ttk.Entry(self)
+        shipmentValueEntry.grid(row=2,column=1)
+        ttk.Label(self, text="Sposób dostawy:").grid(row=3, column=0)
+        deliveryMethodEntry = ttk.Combobox(self, values = ['Kurier Pocztex', 'Kurier DPD', 'Kurier DHL', 'Paczkomaty InPost'])
+        deliveryMethodEntry.bind('<<ComboboxSelected>>', deliveryCostHandler)
+        deliveryMethodEntry.grid(row=3, column=1)
+        ttk.Label(self, text="Koszt dostawy:").grid(row=4, column=0)
+        deliveryCostLabel = ttk.Label(self)
+        deliveryCostLabel.grid(row=4, column=1)
+        ttk.Label(self, text="Sposób płatności:").grid(row=5, column=0)
+        paymentMethodEntry = ttk.Combobox(self, values = ['Blik', 'Za pobraniem', 'Przelew tradycyjny'])
+        paymentMethodEntry.grid(row=5, column=1)
+
+        ttk.Label(self, text="Adres docelowy:").grid(row=6, column=0, pady=20)
+        ttk.Label(self, text="Miasto:").grid(row=7, column=0)
+        cityEntry = ttk.Entry(self)
+        cityEntry.grid(row=7, column=1)
+        ttk.Label(self, text="Ulica:").grid(row=8, column=0)
+        streetEntry = ttk.Entry(self)
+        streetEntry.grid(row=8, column=1)
+        ttk.Label(self, text="Kod pocztowy:").grid(row=9, column=0)
+        postCodeEntry = ttk.Entry(self)
+        postCodeEntry.grid(row=9, column=1)
+        ttk.Label(self, text="Numer domu:").grid(row=10, column=0)
+        houseNumberEntry = ttk.Entry(self)
+        houseNumberEntry.grid(row=10, column=1)
+        ttk.Label(self, text="Numer mieszkania:").grid(row=11, column=0)
+        apartmentNumberEntry = ttk.Entry(self)
+        apartmentNumberEntry.grid(row=11, column=1)
+        ttk.Label(self, text="Kraj:").grid(row=12, column=0)
+        countryEntry = ttk.Entry(self)
+        countryEntry.grid(row=12, column=1)
+
+
+        def new_node():
+            id="c1"
+            title="Programming in C++"
+            level=2
+            query="CREATE (c1:Course {id: '%s', title: '%s', level: %d})" % (id, title, level)
+            q=session.run(query)
+            query="MATCH (n) RETURN n"
+            results = session.run(query)
+            for node in results:
+                print(node)
+
+        button1 = ttk.Button(self, text="Zatwierdź", command=new_node)
+        button1.grid(row=13, column=1, padx=10, pady=10)
+
+            
+
+        
 
         button1 = ttk.Button(self, text="Wróć", command=lambda: controller.show_frame(StartPage))
-        button1.grid(row=10, column=0, padx=10, pady=10)
+        button1.grid(row=20, column=0, padx=10, pady=10)
+        button2 = ttk.Button(self, text="Wyświetl swoje przesyłki", command=lambda: controller.show_frame(ShowAllPackages))
+        button2.grid(row=20, column=1, padx=10, pady=10)
+
+        
+class ShowAllPackages(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = ttk.Label(self, text ="Page 2", font = LARGEFONT)
+        label.grid(row = 0, column = 4, padx = 10, pady = 10)
+
+        button1 = ttk.Button(self, text ="Wróć", command = lambda : controller.show_frame(SendNewPackage))
+        button1.grid(row = 1, column = 1, padx = 10, pady = 10)
+
 
 
 app = tkinterApp()

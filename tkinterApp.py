@@ -5,6 +5,7 @@ import pandas as pd
 from dateutil import parser
 from neo4j import GraphDatabase
 import networkx as nx
+import random
 
 LARGEFONT =("Verdana", 15)
 
@@ -13,6 +14,7 @@ client = MongoClient(CONNECTION_STRING)
 database = client['lab3']
 users = database["users"]
 
+loggedInUser = None
 loggedInUserLabel = None
 
 
@@ -39,6 +41,8 @@ def logIn(controller, login, password, statusLabel):
     results = users.find(user)
     results_list = list(results)
     if len(results_list) > 0:
+        global loggedInUser
+        loggedInUser = login
         global loggedInUserLabel
         loggedInUserLabel.config(text= "Witaj " + login + "! Nadaj nową paczkę")
         controller.show_frame(SendNewPackage)
@@ -56,6 +60,9 @@ def register(login, password, statusLabel):
         "password": password
     }
     users.insert_one(user)
+
+    query="CREATE (u:User {id: '%s' })" % (login)
+    q=session.run(query)
     statusLabel.config(text = "User " + login  + " saved to database")
 
 def changePassword(login, newPassword, statusLabel):
@@ -155,7 +162,8 @@ class SendNewPackage(tk.Frame):
         global loggedInUserLabel
         loggedInUserLabel = ttk.Label(self, font= LARGEFONT)
         loggedInUserLabel.grid(row=0, column=0)
-        isFragileEntry = ttk.Checkbutton(self, text="Kruchy towar")
+        isFragileVar = tk.IntVar()
+        isFragileEntry = ttk.Checkbutton(self, text="Kruchy towar", variable=isFragileVar)
         isFragileEntry.grid(row=1,column=1)
         ttk.Label(self, text="Wartość przesyłki:").grid(row=2, column=0)
         shipmentValueEntry = ttk.Entry(self)
@@ -172,6 +180,8 @@ class SendNewPackage(tk.Frame):
         paymentMethodEntry.grid(row=5, column=1)
 
         ttk.Label(self, text="Adres docelowy:").grid(row=6, column=0, pady=20)
+        addressEntry = ttk.Combobox(self)
+        addressEntry.grid(row=6, column=1)
         ttk.Label(self, text="Miasto:").grid(row=7, column=0)
         cityEntry = ttk.Entry(self)
         cityEntry.grid(row=7, column=1)
@@ -192,18 +202,60 @@ class SendNewPackage(tk.Frame):
         countryEntry.grid(row=12, column=1)
 
 
-        def new_node():
-            id="c1"
-            title="Programming in C++"
-            level=2
-            query="CREATE (c1:Course {id: '%s', title: '%s', level: %d})" % (id, title, level)
-            q=session.run(query)
-            query="MATCH (n) RETURN n"
-            results = session.run(query)
-            for node in results:
-                print(node)
+        def insertPackage():
+            global loggedInUser
 
-        button1 = ttk.Button(self, text="Zatwierdź", command=new_node)
+            number= random.randint(0, 1000000)
+            isFragile = isFragileVar.get()
+            shipmentValue = float(shipmentValueEntry.get())
+            deliveryMethod = deliveryMethodEntry.get()
+            deliveryCost = float(deliveryCostLabel['text'])
+            paymentMethod = paymentMethodEntry.get()
+            query="CREATE (p:Package {id: '%s', isFragile: '%s', shipmentValue: %f, deliveryMethod: '%s', deliveryCost: '%f', paymentMethod: '%s'})" % (number, isFragile, shipmentValue, deliveryMethod, deliveryCost, paymentMethod)
+            q=session.run(query)
+
+            query="MATCH (u:User), (p:Package) WHERE u.id='%s' AND p.id='%s' CREATE (u)-[:SENT]->(p)" % (loggedInUser, number)
+            q=session.run(query)
+
+            id = 0
+            if(addressEntry.get() == ''):
+                id = insertAddress()
+
+            query="MATCH (a:Address), (p:Package) WHERE a.id='%s' AND p.id='%s' CREATE (p)-[:HAS_DESTINATION]->(a)" % (id, number)
+            q=session.run(query)
+        
+        def insertAddress():
+            query="MATCH (a:Address) RETURN a"
+            results = session.run(query)
+            id = 'a' + str(len(list(results)))
+            city = cityEntry.get()
+            street = streetEntry.get()
+            postCode = postCodeEntry.get()
+            houseNumber = houseNumberEntry.get()
+            apartmentNumber = apartmentNumberEntry.get()
+            country = countryEntry.get()
+            query = "CREATE (a:Address {id: '%s', city: '%s', street: '%s', postCode: '%s', houseNumber: '%s', apartmentNumber: '%s',country: '%s' })" % (id, city, street, postCode, houseNumber, apartmentNumber, country)
+            q=session.run(query)
+            return id
+
+        def getAdressesList():
+            query="MATCH (a:Address) RETURN a"
+            results = session.run(query)
+            nodes = list(results.graph()._nodes.values())
+            addresses = []
+            for node in nodes:
+                addresses.append(node.id)
+
+        def getAdresses():
+            query="MATCH (a:Address) RETURN a"
+            results = session.run(query)
+            nodes = list(results.graph()._nodes.values())
+            return nodes
+
+            
+
+
+        button1 = ttk.Button(self, text="Zatwierdź", command=insertPackage)
         button1.grid(row=13, column=1, padx=10, pady=10)
 
             

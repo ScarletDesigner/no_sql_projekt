@@ -4,15 +4,24 @@ from pymongo import MongoClient
 import pandas as pd
 from dateutil import parser
 
-LARGEFONT =("Verdana", 35)
+LARGEFONT =("Verdana", 15)
 
 CONNECTION_STRING = "mongodb://localhost:27017"
 client = MongoClient(CONNECTION_STRING)
 database = client['lab3']
 users = database["users"]
 
+loggedInUserLabel = None
 
-def logIn(controller, login, password):
+def userDoesExist(login):
+    user = {
+        "login": login,
+    }
+    results = users.find(user)
+    results_list = list(results)
+    return len(results_list) > 0
+
+def logIn(controller, login, password, statusLabel):
     user = {
         "login": login,
         "password": password
@@ -20,21 +29,15 @@ def logIn(controller, login, password):
     results = users.find(user)
     results_list = list(results)
     if len(results_list) > 0:
+        global loggedInUserLabel
+        loggedInUserLabel.config(text= "Witaj " + login + "! Nadaj nową paczkę")
         controller.show_frame(Page1)
+    else:
+        statusLabel.config(text= "Username or password incorrect")
 
-    
-    
-def doesUserAlreadyExists(login):
-    user = {
-        "login": login,
-    }
-    results = users.find(user)
-    results_list = list(results)
-    return len(results_list) > 0
-        
 
 def register(login, password, statusLabel):
-    if doesUserAlreadyExists(login):
+    if userDoesExist(login):
         statusLabel.config(text = "User already exists. Please choose different username.")
         return
 
@@ -45,7 +48,11 @@ def register(login, password, statusLabel):
     users.insert_one(user)
     statusLabel.config(text = "User " + login  + " saved to database")
 
-def changePassword(login, newPassword):
+def changePassword(login, newPassword, statusLabel):
+    if not userDoesExist(login):
+        statusLabel.config(text= "User " + login + " does not exist")
+        return
+
     user = {
         "login": login
     }
@@ -55,13 +62,18 @@ def changePassword(login, newPassword):
         }
     }
     users.update_one(user, new_password)
+    statusLabel.config(text= "Password of user " + login + " has been changed")
 
-def deleteUser(login):
+def deleteUser(login, statusLabel):
+    if not userDoesExist(login):
+        statusLabel.config(text= "User " + login + " does not exist")
+        return
+
     user = {
         "login": login
     }
     users.delete_one(user)
-
+    statusLabel.config(text= "User " + login + " has been deleted")
 
 class tkinterApp(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -94,10 +106,10 @@ class StartPage(tk.Frame):
         loginEntry = ttk.Entry(self, width=30)
         passwordLabel = ttk.Label(self, text="Password:")
         passwordEntry = ttk.Entry(self, width=30)
-        loginButton = ttk.Button(self, text='Zaloguj się', command= lambda: logIn(controller, loginEntry.get(), passwordEntry.get()))
+        loginButton = ttk.Button(self, text='Zaloguj się', command= lambda: logIn(controller, loginEntry.get(), passwordEntry.get(), statusLabel))
         registerButton = ttk.Button(self, text='Zarejestruj się', command= lambda: register(loginEntry.get(), passwordEntry.get(), statusLabel))
-        changePasswordButton = ttk.Button(self, text="Zmień hasło", command= lambda: changePassword(loginEntry.get(), passwordEntry.get()))
-        deleteUserButton = ttk.Button(self, text="Usuń użytkownika", command= lambda: deleteUser(loginEntry.get()))
+        changePasswordButton = ttk.Button(self, text="Zmień hasło", command= lambda: changePassword(loginEntry.get(), passwordEntry.get(), statusLabel))
+        deleteUserButton = ttk.Button(self, text="Usuń użytkownika", command= lambda: deleteUser(loginEntry.get(), statusLabel))
         statusLabel = ttk.Label(self, text="")
         statusLabel.grid(row=2, column=1)
         loginLabel.grid(row=0, column=0)
@@ -113,15 +125,16 @@ class StartPage(tk.Frame):
 class Page1(tk.Frame):
 
     def __init__(self, parent, controller):
-
         tk.Frame.__init__(self, parent)
-        label = ttk.Label(self, text="Page 1", font=LARGEFONT)
-        label.grid(row=0, column=4, padx=10, pady=10)
+        global loggedInUserLabel
+        loggedInUserLabel = ttk.Label(self, font= LARGEFONT)
+        loggedInUserLabel.grid(row=0, column=0)
+        ttk.Checkbutton(self, text="Kruchy towar").grid(row=1,column=1)
+        ttk.Label(self, text="Wartość przesyłki:").grid(row=2, column=0)
+        ttk.Entry(self).grid(row=2,column=1)
 
-        button1 = ttk.Button(self, text="Wróć",
-                             command=lambda: controller.show_frame(StartPage))
-
-        button1.grid(row=1, column=1, padx=10, pady=10)
+        button1 = ttk.Button(self, text="Wróć", command=lambda: controller.show_frame(StartPage))
+        button1.grid(row=10, column=0, padx=10, pady=10)
 
 
 app = tkinterApp()

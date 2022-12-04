@@ -179,6 +179,14 @@ class SendNewPackage(tk.Frame):
         paymentMethodEntry = ttk.Combobox(self, values = ['Blik', 'Za pobraniem', 'Przelew tradycyjny'])
         paymentMethodEntry.grid(row=5, column=1)
 
+        def clearPackageEntries():
+            cityEntry.delete(0, 'end')
+            streetEntry.delete(0, 'end')
+            postCodeEntry.delete(0, 'end')
+            houseNumberEntry.delete(0, 'end')
+            apartmentNumberEntry.delete(0, 'end')
+            countryEntry.delete(0, 'end')
+
         def addressHandler(event):
             query="MATCH (a:Address) RETURN a.city, a.street"
             results = session.run(query)
@@ -187,47 +195,19 @@ class SendNewPackage(tk.Frame):
             if current != -1:
                 x = addressEntry.get()
                 if x == '':
-                    cityEntry.config(state= 'enabled')
-                    streetEntry.config(state= 'enabled')
-                    postCodeEntry.config(state= 'enabled')
-                    houseNumberEntry.config(state= 'enabled')
-                    apartmentNumberEntry.config(state= 'enabled')
-                    countryEntry.config(state= 'enabled')
-                    cityEntry.delete(0, 'end')
-                    streetEntry.delete(0, 'end')
-                    postCodeEntry.delete(0, 'end')
-                    houseNumberEntry.delete(0, 'end')
-                    apartmentNumberEntry.delete(0, 'end')
-                    countryEntry.delete(0, 'end')
+                    clearPackageEntries()
                 else:
-                    cityEntry.config(state= 'enabled')
-                    streetEntry.config(state= 'enabled')
-                    postCodeEntry.config(state= 'enabled')
-                    houseNumberEntry.config(state= 'enabled')
-                    apartmentNumberEntry.config(state= 'enabled')
-                    countryEntry.config(state= 'enabled')
-                    cityEntry.delete(0, 'end')
-                    streetEntry.delete(0, 'end')
-                    postCodeEntry.delete(0, 'end')
-                    houseNumberEntry.delete(0, 'end')
-                    apartmentNumberEntry.delete(0, 'end')
-                    countryEntry.delete(0, 'end')
+                    clearPackageEntries()
                     id = addressEntry.get().split(sep=',')[0]
                     query="MATCH (a:Address) WHERE a.id='%s' RETURN a.city, a.street, a.postCode, a.houseNumber, a.apartmentNumber, a.country" % (id)
                     results = session.run(query)
                     nodes = list(results)
                     cityEntry.insert(0, str(nodes[0]['a.city']))
-                    cityEntry.config(state= 'disabled')
                     streetEntry.insert(0, str(nodes[0]['a.street']))
-                    streetEntry.config(state= 'disabled')
                     postCodeEntry.insert(0, str(nodes[0]['a.postCode']))
-                    postCodeEntry.config(state= 'disabled')
                     houseNumberEntry.insert(0, str(nodes[0]['a.houseNumber']))
-                    houseNumberEntry.config(state= 'disabled')
                     apartmentNumberEntry.insert(0, str(nodes[0]['a.apartmentNumber']))
-                    apartmentNumberEntry.config(state= 'disabled')
                     countryEntry.insert(0, str(nodes[0]['a.country']))
-                    countryEntry.config(state= 'disabled')
 
 
         def getAddressesList():
@@ -267,6 +247,8 @@ class SendNewPackage(tk.Frame):
         ttk.Label(self, text="Kraj:").grid(row=12, column=0)
         countryEntry = ttk.Entry(self)
         countryEntry.grid(row=12, column=1)
+        statusLabel = ttk.Label(self)
+        statusLabel.grid(row=13, column=1)
 
 
         def insertPackage():
@@ -287,11 +269,16 @@ class SendNewPackage(tk.Frame):
             id = 0
             if(addressEntry.get() == ''):
                 id = insertAddress()
+            else:
+                id = addressEntry.get().split(sep=',')[0]
 
             
 
             query="MATCH (a:Address), (p:Package) WHERE a.id='%s' AND p.id='%s' CREATE (p)-[:HAS_DESTINATION]->(a)" % (id, number)
             q=session.run(query)
+            clearPackageEntries()
+            addressEntry.set('')
+            statusLabel.config(text="Zatwierdzono przesyłkę")
         
         def insertAddress():
             query="MATCH (a:Address) RETURN a"
@@ -307,19 +294,11 @@ class SendNewPackage(tk.Frame):
             q=session.run(query)
             return id
 
-
-
-        def getAddresses():
-            query="MATCH (a:Address) RETURN a"
-            results = session.run(query)
-            nodes = list(results.graph()._nodes.values())
-            return nodes
-
             
 
 
         button1 = ttk.Button(self, text="Zatwierdź", command=insertPackage)
-        button1.grid(row=13, column=1, padx=10, pady=10)
+        button1.grid(row=14, column=1, padx=10, pady=10)
 
             
 
@@ -334,11 +313,52 @@ class SendNewPackage(tk.Frame):
 class ShowAllPackages(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        label = ttk.Label(self, text ="Page 2", font = LARGEFONT)
-        label.grid(row = 0, column = 4, padx = 10, pady = 10)
+        
+        def getPackages():
+            query = "MATCH (u:User)-[r:SENT]->(p:Package) WHERE u.id = '%s' RETURN p" % (loggedInUser)
+            results = session.run(query)
+            nodes = list(results.graph()._nodes.values())
+
+            ttk.Label(self, text="numer", ).grid(row=2, column=0)
+            ttk.Label(self, text="czy krucha", ).grid(row=2, column=1)
+            ttk.Label(self, text="wartość przesyłki", ).grid(row=2, column=2)
+            ttk.Label(self, text="sposób dostawy", ).grid(row=2, column=3)
+            ttk.Label(self, text="koszt dostawy", ).grid(row=2, column=4)
+            ttk.Label(self, text="sposób płatności", ).grid(row=2, column=5)
+            ttk.Label(self, text="miasto", ).grid(row=2, column=6)
+            ttk.Label(self, text="ulica", ).grid(row=2, column=7)
+            ttk.Label(self, text="kod pocztowy", ).grid(row=2, column=8)
+            ttk.Label(self, text="numer domu", ).grid(row=2, column=9)
+            ttk.Label(self, text="numer mieszkania", ).grid(row=2, column=10)
+            ttk.Label(self, text="kraj", ).grid(row=2, column=11)
+            
+            
+            i = 3
+            for node in nodes:
+                ttk.Label(self, text=str(node._properties['id'])).grid(row=i, column=0)
+                ttk.Label(self, text=str(node._properties['isFragile'])).grid(row=i, column=1)
+                ttk.Label(self, text=str(node._properties['shipmentValue'])).grid(row=i, column=2)
+                ttk.Label(self, text=str(node._properties['deliveryMethod'])).grid(row=i, column=3)
+                ttk.Label(self, text=str(node._properties['deliveryCost'])).grid(row=i, column=4)
+                ttk.Label(self, text=str(node._properties['paymentMethod'])).grid(row=i, column=5)
+
+                query = "MATCH (p:Package)-[r:HAS_DESTINATION]->(a:Address) WHERE p.id = '%s' RETURN a" % (node._properties['id'])
+                addressResults = session.run(query)
+                addressNodes = list(addressResults.graph()._nodes.values())
+
+                for node in addressNodes:
+                    ttk.Label(self, text=str(node._properties['city'])).grid(row=i, column=6)
+                    ttk.Label(self, text=str(node._properties['street'])).grid(row=i, column=7)
+                    ttk.Label(self, text=str(node._properties['postCode'])).grid(row=i, column=8)
+                    ttk.Label(self, text=str(node._properties['houseNumber'])).grid(row=i, column=9)
+                    ttk.Label(self, text=str(node._properties['apartmentNumber'])).grid(row=i, column=10)
+                    ttk.Label(self, text=str(node._properties['country'])).grid(row=i, column=11)
+                i += 1
 
         button1 = ttk.Button(self, text ="Wróć", command = lambda : controller.show_frame(SendNewPackage))
         button1.grid(row = 1, column = 1, padx = 10, pady = 10)
+        button2 = ttk.Button(self, text="Odśwież", command=getPackages)
+        button2.grid(row=1, column=2)
 
 
 

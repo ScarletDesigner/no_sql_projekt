@@ -104,7 +104,7 @@ class tkinterApp(tk.Tk):
 
         self.frames = {}
 
-        for F in (StartPage, SendNewPackage, ShowAllPackages):
+        for F in (StartPage, SendNewPackage, ShowAllPackages, AllUsers):
             frame = F(container,self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -138,6 +138,35 @@ class StartPage(tk.Frame):
         changePasswordButton.grid(row=4,column=1)
         deleteUserButton.grid(row=5,column=1)
 
+        allUsersPageButton = ttk.Button(self, text="Zobacz wszystkich użytkowników", command= lambda: controller.show_frame(AllUsers))
+        allUsersPageButton.grid(row= 6, column= 2)
+
+class AllUsers(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+        group = {"$group": {"_id": "null", "count": {"$sum": 1}}}
+        results_a = users.aggregate([group])
+        for row in results_a:
+            ttk.Label(self, text="Liczba wszystkich użytkowników: " + str(row['count'])).grid(row=0, column=0)
+
+        group = {"$group": { "_id": "null", "pass_length": { "$sum": {"$strLenCP": "$password"} } }}
+        results_a = users.aggregate([group])
+        for row in results_a:
+            ttk.Label(self, text="Średnia długość hasła użytkownika: " + str(row['pass_length'])).grid(row=1, column=0)
+
+        ttk.Label(self, text="Lista użytkowników z długością hasła:").grid(row=2, column=0, pady=20)
+        group = {"$group": { "_id": "$login", "pass_length": { "$sum": {"$strLenCP": "$password"} } }}
+        sort = {"$sort": {"pass_length": -1}}
+        results_a = users.aggregate([group, sort])
+        i = 3
+        for row in results_a:
+            ttk.Label(self, text=str(row['_id'])+ " - " + str(row['pass_length'])).grid(row=i, column=0)
+            i += 1
+        
+
+        button1 = ttk.Button(self, text="Wróć", command=lambda: controller.show_frame(StartPage))
+        button1.grid(row=100, column=0, padx=10, pady=10)
 
 class SendNewPackage(tk.Frame):
 

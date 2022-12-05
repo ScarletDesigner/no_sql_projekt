@@ -150,7 +150,7 @@ class AllUsers(tk.Frame):
         for row in results_a:
             ttk.Label(self, text="Liczba wszystkich użytkowników: " + str(row['count'])).grid(row=0, column=0)
 
-        group = {"$group": { "_id": "null", "pass_length": { "$sum": {"$strLenCP": "$password"} } }}
+        group = {"$group": { "_id": "null", "pass_length": { "$avg": {"$strLenCP": "$password"} } }}
         results_a = users.aggregate([group])
         for row in results_a:
             ttk.Label(self, text="Średnia długość hasła użytkownika: " + str(row['pass_length'])).grid(row=1, column=0)
@@ -347,52 +347,171 @@ class SendNewPackage(tk.Frame):
 class ShowAllPackages(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
+
+        headerRow = []
+        packagesRows = []
+
+        def refreshPackagesList():
+            for row in packagesRows:
+                for label in row:
+                    label.destroy()
+
+        def deletePackage(number):
+            query = "MATCH (p:Package { id: '%d' })  DETACH DELETE p" % (int(number))
+            q = session.run(query)
+            getPackages()
+
+        def showHeader():
+            numberLabel = ttk.Label(self, text="numer" )
+            numberLabel.grid(row=2, column=0)
+            headerRow.append(numberLabel)
+            isFragileLabel = ttk.Label(self, text="czy krucha")
+            isFragileLabel.grid(row=2, column=1)
+            headerRow.append(isFragileLabel)
+            shipmentValueLabel = ttk.Label(self, text="wartość przesyłki")
+            shipmentValueLabel.grid(row=2, column=2)
+            headerRow.append(shipmentValueLabel)
+            deliveryMethodLabel = ttk.Label(self, text="sposób dostawy")
+            deliveryMethodLabel.grid(row=2, column=3)
+            headerRow.append(deliveryMethodLabel)
+            deliveryCostLabel = ttk.Label(self, text="koszt dostawy")
+            deliveryCostLabel.grid(row=2, column=4)
+            headerRow.append(deliveryCostLabel)
+            paymentMethodLabel = ttk.Label(self, text="sposób płatności")
+            paymentMethodLabel.grid(row=2, column=5)
+            headerRow.append(paymentMethodLabel)
+            cityLabel = ttk.Label(self, text="miasto")
+            cityLabel.grid(row=2, column=6)
+            headerRow.append(cityLabel)
+            streetLabel = ttk.Label(self, text="ulica")
+            streetLabel.grid(row=2, column=7)
+            headerRow.append(streetLabel)
+            postCodeLabel = ttk.Label(self, text="kod pocztowy")
+            postCodeLabel.grid(row=2, column=8)
+            headerRow.append(postCodeLabel)
+            houseNumberLabel = ttk.Label(self, text="numer domu")
+            houseNumberLabel.grid(row=2, column=9)
+            headerRow.append(houseNumberLabel)
+            apartmentNumberLabel = ttk.Label(self, text="numer mieszkania")
+            apartmentNumberLabel.grid(row=2, column=10)
+            headerRow.append(apartmentNumberLabel)
+            countryLabel = ttk.Label(self, text="kraj")
+            countryLabel.grid(row=2, column=11)
+            headerRow.append(countryLabel)
         
         def getPackages():
+            refreshPackagesList()
             query = "MATCH (u:User)-[r:SENT]->(p:Package) WHERE u.id = '%s' RETURN p" % (loggedInUser)
             results = session.run(query)
             nodes = list(results.graph()._nodes.values())
 
-            ttk.Label(self, text="numer", ).grid(row=2, column=0)
-            ttk.Label(self, text="czy krucha", ).grid(row=2, column=1)
-            ttk.Label(self, text="wartość przesyłki", ).grid(row=2, column=2)
-            ttk.Label(self, text="sposób dostawy", ).grid(row=2, column=3)
-            ttk.Label(self, text="koszt dostawy", ).grid(row=2, column=4)
-            ttk.Label(self, text="sposób płatności", ).grid(row=2, column=5)
-            ttk.Label(self, text="miasto", ).grid(row=2, column=6)
-            ttk.Label(self, text="ulica", ).grid(row=2, column=7)
-            ttk.Label(self, text="kod pocztowy", ).grid(row=2, column=8)
-            ttk.Label(self, text="numer domu", ).grid(row=2, column=9)
-            ttk.Label(self, text="numer mieszkania", ).grid(row=2, column=10)
-            ttk.Label(self, text="kraj", ).grid(row=2, column=11)
+            showHeader()
             
-            
+            packageRow = []
             i = 3
             for node in nodes:
-                ttk.Label(self, text=str(node._properties['id'])).grid(row=i, column=0)
-                ttk.Label(self, text=str(node._properties['isFragile'])).grid(row=i, column=1)
-                ttk.Label(self, text=str(node._properties['shipmentValue'])).grid(row=i, column=2)
-                ttk.Label(self, text=str(node._properties['deliveryMethod'])).grid(row=i, column=3)
-                ttk.Label(self, text=str(node._properties['deliveryCost'])).grid(row=i, column=4)
-                ttk.Label(self, text=str(node._properties['paymentMethod'])).grid(row=i, column=5)
+                id = node._properties['id']
+                idLabel = ttk.Label(self, text=str(node._properties['id']))
+                idLabelColumn = 0
+                idLabel.grid(row=i, column=idLabelColumn)
+                packageRow.append(idLabel)
+                isFragileLabel = ttk.Label(self, text=str(node._properties['isFragile']))
+                isFragileLabel.grid(row=i, column=1)
+                packageRow.append(isFragileLabel)
+                shipmentValueLabel = ttk.Label(self, text=str(node._properties['shipmentValue']))
+                shipmentValueLabel.grid(row=i, column=2)
+                packageRow.append(shipmentValueLabel)
+                deliveryMethodLabel = ttk.Label(self, text=str(node._properties['deliveryMethod']))
+                deliveryMethodLabel.grid(row=i, column=3)
+                packageRow.append(deliveryMethodLabel)
+                deliveryCostLabel = ttk.Label(self, text=str(node._properties['deliveryCost']))
+                deliveryCostLabel.grid(row=i, column=4)
+                packageRow.append(deliveryCostLabel)
+                paymentMethodLabel = ttk.Label(self, text=str(node._properties['paymentMethod']))
+                paymentMethodLabel.grid(row=i, column=5)
+                packageRow.append(paymentMethodLabel)
 
                 query = "MATCH (p:Package)-[r:HAS_DESTINATION]->(a:Address) WHERE p.id = '%s' RETURN a" % (node._properties['id'])
                 addressResults = session.run(query)
                 addressNodes = list(addressResults.graph()._nodes.values())
 
                 for node in addressNodes:
-                    ttk.Label(self, text=str(node._properties['city'])).grid(row=i, column=6)
-                    ttk.Label(self, text=str(node._properties['street'])).grid(row=i, column=7)
-                    ttk.Label(self, text=str(node._properties['postCode'])).grid(row=i, column=8)
-                    ttk.Label(self, text=str(node._properties['houseNumber'])).grid(row=i, column=9)
-                    ttk.Label(self, text=str(node._properties['apartmentNumber'])).grid(row=i, column=10)
-                    ttk.Label(self, text=str(node._properties['country'])).grid(row=i, column=11)
+                    cityLabel = ttk.Label(self, text=str(node._properties['city']))
+                    cityLabel.grid(row=i, column=6)
+                    packageRow.append(cityLabel)
+                    streetLabel = ttk.Label(self, text=str(node._properties['street']))
+                    streetLabel.grid(row=i, column=7)
+                    packageRow.append(streetLabel)
+                    postCodeLabel = ttk.Label(self, text=str(node._properties['postCode']))
+                    postCodeLabel.grid(row=i, column=8)
+                    packageRow.append(postCodeLabel)
+                    houseNumberLabel = ttk.Label(self, text=str(node._properties['houseNumber']))
+                    houseNumberLabel.grid(row=i, column=9)
+                    packageRow.append(houseNumberLabel)
+                    apartmentNumberLabel = ttk.Label(self, text=str(node._properties['apartmentNumber']))
+                    apartmentNumberLabel.grid(row=i, column=10)
+                    packageRow.append(apartmentNumberLabel)
+                    countryLabel = ttk.Label(self, text=str(node._properties['country']))
+                    countryLabel.grid(row=i, column=11)
+                    packageRow.append(countryLabel)
+                packagesRows.append(packageRow)
                 i += 1
 
         button1 = ttk.Button(self, text ="Wróć", command = lambda : controller.show_frame(SendNewPackage))
-        button1.grid(row = 1, column = 1, padx = 10, pady = 10)
+        button1.grid(row = 1, column = 0, padx = 10, pady = 10)
         button2 = ttk.Button(self, text="Odśwież", command=getPackages)
-        button2.grid(row=1, column=2)
+        button2.grid(row=1, column=1)
+
+        deleteLabel = ttk.Label(self, text="Wybierz numer przesyłki do usunięcia:")
+        deleteLabel.grid(row=100,column=0)
+        deleteEntry = ttk.Entry(self, width=10)
+        deleteEntry.grid(row=101, column=0)
+        deleteButton = ttk.Button(self, text="Usuń", command=lambda: deletePackage(deleteEntry.get()))
+        deleteButton.grid(row=101, column=1)
+
+        def mapPackageLabelTextToDatabaseFieldName(text):
+            if text == 'numer':
+                return 'p.number'
+            elif text == 'czy krucha':
+                return 'p.isFragile'
+            elif text == 'wartość przesyłki':
+                return 'p.shipmentValue'
+            elif text == 'sposób dostawy':
+                return 'p.deliveryMethod'
+            elif text == 'koszt dostawy':
+                return 'p.deliveryCost'
+            elif text == 'sposób płatności':
+                return 'p.paymentMethod'
+            elif text == 'miasto':
+                return 'a.city'
+            elif text == 'ulica':
+                return 'a.street'
+            elif text == 'kod pocztowy':
+                return 'a.postCode'
+            elif text == 'numer domu':
+                return 'a.houseNumber'
+            elif text == 'numer mieszkania':
+                return 'a.apartmentNumber'
+            elif text == 'kraj':
+                return 'a.country'
+
+
+
+        def editPackage(number, field, newValue):
+            query = "MATCH (p:Package)-[r:HAS_DESTINATION]->(a:Address) WHERE p.id = '%s' SET %s = '%s'" % (number, field, newValue)
+            q = session.run(query)
+            getPackages()
+
+        editLabel = ttk.Label(self, text="Wybierz numer paczki i nazwę pola do edycji a następnie wprowadź nową wartość")
+        editLabel.grid(row=102, column=0, pady=20)
+        editNumberEntry = ttk.Entry(self)
+        editNumberEntry.grid(row=103, column=0)
+        editFieldEntry = ttk.Entry(self)
+        editFieldEntry.grid(row=104, column=0)
+        editNewValueEntry = ttk.Entry(self)
+        editNewValueEntry.grid(row=105, column=0)
+        editButton = ttk.Button(self, text="Edytuj", command=lambda:editPackage(editNumberEntry.get(), mapPackageLabelTextToDatabaseFieldName(editFieldEntry.get()), editNewValueEntry.get()))
+        editButton.grid(row=106, column=0)
 
 
 

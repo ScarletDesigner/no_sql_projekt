@@ -224,11 +224,16 @@ class SendNewPackage(tk.Frame):
                 row += str(node['a.street'])
                 addresses.append(row)
             return addresses
+        
+        def refreshAddressesList():
+            addressEntry.config(values= getAddressesList())
 
         ttk.Label(self, text="Adres docelowy:").grid(row=6, column=0, pady=20)
         addressEntry = ttk.Combobox(self, values= getAddressesList())
         addressEntry.bind('<<ComboboxSelected>>', addressHandler)
         addressEntry.grid(row=6, column=1)
+        addressRefreshButton = ttk.Button(self, text="Odśwież", command=refreshAddressesList)
+        addressRefreshButton.grid(row=6,column=2)
         ttk.Label(self, text="Miasto:").grid(row=7, column=0)
         cityEntry = ttk.Entry(self)
         cityEntry.grid(row=7, column=1)

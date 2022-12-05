@@ -1,0 +1,9 @@
+Projekt wykonany w oparciu o techonologie przedstawione w intrukcji laboratorynej wykorzystując bazy mongo oraz neo4j. Do interfejsu graficznego została użyta biblioteka tkinter, która jest wbudowana w standardową dystrybuję Python 3.10+. Należy uruchomić docker z mongo oraz neo4j wykorzystując standardowe skypty z instrukcji labortoryjnych. W bazie neo4j należy utworzyć i uruchomić Local DBMS z hasłem 'kurierzy'. Węwnątrz danego DBMS wykorzystywana jest baza danych o nazwie 'kurierzy'.
+
+Strona startowa zawiera mechanizm rejestracji/logowania użytkowników, który korzysta z bazy mongo. Jedyną operacją na tym ekranie, która tworzy węzeł użytkownika w bazie neo4j jest rejestracja nowego użytkownika.
+Strona wyświetlająca wszystkich użytkowników korzysta z trzech agregacji. Agregacja zliczająca wszystkich użytkowników w bazie; agregacja wyliczająca średnią długość hasła wśród wszystkich użytkowników, oraz agregacja grupująca wszystkich użytkowników i długość ich hasła.
+Na ekranie przesyłki można nadać nową przesyłkę, która zostanie zapisana w bazie neo4j. W bazie zostaną zapisane relacje oparte o 3 węzły: węzeł użytkownika, węzeł przesyłki oraz węzeł adresu. Po dodaniu nowej przesyłki (bez wybrania predefiniowanego adresu) zostaną utworzone 3 węzły oraz powiązania między nimi. Jeżeli dodamy przesyłkę, to możliwe jest dodanie następnej przesyłki wykorzystując predefiniowany adres zapisany w bazie. W przypadku dodawania przesyłki z wybranym predefiniowanym adresem, wtedy w bazie utworzona zostaje relacja do już istniejącego węzła.
+Na ekranie wszystkich przesyłek wykorzystane zostały zapytania: 
+- wypisujące wszystkie przesyłki dla aktualnie zalogowanego użytkownika,
+- aktualizujące dane przesyłki
+- usuwające przesyłki z bazy
